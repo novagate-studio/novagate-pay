@@ -54,7 +54,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton size={'lg'} className='' isActive={pathname === '/'} asChild>
+              <SidebarMenuButton
+                size={'lg'}
+                className=''
+                isActive={pathname === '/' || pathname.startsWith('/withdraw')}
+                asChild>
                 <Link href='/' onClick={handleMenuClick}>
                   <Home className='size-5!' />
                   <span>Trang chủ</span>

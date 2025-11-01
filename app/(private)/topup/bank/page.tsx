@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label'
 import { getDepositMethods, getDepositPackages } from '@/services/wallet'
 import { DepositMethod, DepositPackage } from '@/models/wallet'
+import { useRouter } from 'next/navigation'
 
 export default function BankTopupPage() {
   const [banks, setBanks] = useState<DepositMethod[]>([])
@@ -15,12 +16,12 @@ export default function BankTopupPage() {
   const [selectedPackage, setSelectedPackage] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
+  const router = useRouter()
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true)
-        
+
         // Fetch deposit methods and filter by 'bank'
         const methodsResponse = await getDepositMethods()
         if (methodsResponse.data && methodsResponse.data.method === 'bank' && methodsResponse.data.data) {
@@ -111,10 +112,14 @@ export default function BankTopupPage() {
               </SelectContent>
             </Select>
           </div>
-
-            <Button onClick={handleSubmit} className='flex-1'>
+          <div className='flex gap-4'>
+            <Button onClick={handleSubmit} className='w-full md:w-xs'>
               Thanh Toán
             </Button>
+            <Button variant={'outline'} onClick={() => router.push('/')} className='w-full md:w-xs'>
+              Quay lại
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
