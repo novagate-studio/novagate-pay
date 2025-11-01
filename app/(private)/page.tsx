@@ -1,11 +1,38 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { DOCUMENT_TYPE } from '@/constants'
-import { useUser } from '@/contexts/user-context'
+import { Card, CardContent } from '@/components/ui/card'
+import { getGameList } from '@/services/game'
+import { Game } from '@/models/game'
+import Image from 'next/image'
+import Link from 'next/link'
+
 export default function Home() {
-  const { user, loading, error, refreshUser } = useUser()
+  const [games, setGames] = useState<Game[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchGames = async () => {
+      try {
+        setLoading(true)
+        const response = await getGameList()
+        if (response.data) {
+          // Sort games by sort field
+          const sortedGames = response.data.sort((a, b) => a.sort - b.sort)
+          setGames(sortedGames)
+        }
+      } catch (err) {
+        setError('Không thể tải danh sách game')
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchGames()
+  }, [])
 
   if (loading) {
     return (
@@ -18,137 +45,39 @@ export default function Home() {
   if (error) {
     return (
       <div className='flex items-center justify-center min-h-screen'>
-        <Card className='w-full max-w-md'>
-          <CardHeader>
-            <CardTitle className='text-red-600'>Lỗi</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={refreshUser} className='w-full'>
-              Thử lại
-            </Button>
-          </CardContent>
-        </Card>
+        <div className='text-red-600'>{error}</div>
       </div>
     )
   }
 
-  // Helper function to mask sensitive data
-  const maskPhone = (phone: string | undefined) => {
-    if (!phone) return ''
-    return phone.replace(/.(?=.{4})/g, '*')
-  }
-
-  const maskEmail = (email: string | undefined) => {
-    if (!email) return ''
-    const [username, domain] = email.split('@')
-    if (username.length <= 2) return email
-    const maskedUsername = '*'.repeat(username.length - 2) + username.slice(-2)
-    return `${maskedUsername}@${domain}`
-  }
-
-  const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return ''
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    })
-  }
-
   return (
-    <div className='space-y-4'>
-      <Card className='shadow-lg'>
-        <CardHeader className='pb-4'>
-          <CardTitle className='text-2xl font-bold text-gray-900'>Xin Chào, {user?.username}!</CardTitle>
-          <CardDescription className='text-base text-gray-600 mt-2'>Thông tin tài khoản của bạn:</CardDescription>
-        </CardHeader>
+    <div className='space-y-6'>
+      <h1 className='text-2xl font-bold text-gray-900'>Danh sách Game EPG</h1>
 
-        <CardContent className='space-y-6'>
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4 text-sm'>
-            {/* Personal Information */}
-            <div className='space-y-4'>
-              <div className='flex justify-between py-2 border-b border-gray-100'>
-                <span className='text-gray-600 font-medium'>Họ và Tên:</span>
-                <span className='text-gray-900 font-semibold'>{user?.full_name || 'Chưa cập nhật'}</span>
-              </div>
-
-              <div className='flex justify-between py-2 border-b border-gray-100'>
-                <span className='text-gray-600 font-medium'>Ngày Sinh:</span>
-                <span className='text-gray-900 font-semibold'>{formatDate(user?.dob) || 'Chưa cập nhật'}</span>
-              </div>
-
-              <div className='flex justify-between py-2 border-b border-gray-100'>
-                <span className='text-gray-600 font-medium'>Giới tính:</span>
-                <span className='text-gray-900 font-semibold'>
-                  {user?.gender === 'male' ? 'Nam' : user?.gender === 'female' ? 'Nữ' : 'Chưa cập nhật'}
-                </span>
-              </div>
-
-              <div className='flex justify-between py-2 border-b border-gray-100'>
-                <span className='text-gray-600 font-medium'>Điện thoại:</span>
-                <span className='text-gray-900 font-semibold'>{maskPhone(user?.phone) || 'Chưa cập nhật'}</span>
-              </div>
-              <div className='flex justify-between py-2 border-b border-gray-100'>
-                <span className='text-gray-600 font-medium'>Email:</span>
-                <span className='text-gray-900 font-semibold'>{maskEmail(user?.email) || 'Chưa cập nhật'}</span>
-              </div>
-              <div className='flex justify-between py-2'>
-                <span className='text-gray-600 font-medium'>Địa Chỉ:</span>
-                <span className='text-gray-900 font-semibold'>{user?.address || 'Chưa cập nhật'}</span>
-              </div>
+      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
+        {games.map((game) => (
+          <Card key={game.id} className='overflow-hidden hover:shadow-lg p-0 gap-0 transition-shadow duration-300'>
+            <div className='relative w-full aspect-square bg-gray-100'>
+              <Image
+                src={game.image_url}
+                alt={game.name}
+                width={500}
+                height={400}
+                className='object-contain h-full w-full'
+              />
             </div>
+            <CardContent className='p-4'>
+              <Link href={`/withdraw-coin?gameId=${game.id}`}>
+                <Button variant='outline' className='w-full text-blue-600 border-blue-600 hover:bg-blue-50'>
+                  {game.name}
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-            {/* Contact & Document Information */}
-            <div className='space-y-4'>
-              <div className='flex justify-between py-2 border-b border-gray-100'>
-                <span className='text-gray-600 font-medium'>Loại giấy tờ:</span>
-                <span className='text-gray-900 font-semibold'>
-                  {user?.user_identity_documents?.[0]?.document_type === DOCUMENT_TYPE.CCCD
-                    ? 'Căn cước công dân'
-                    : user?.user_identity_documents?.[0]?.document_type === DOCUMENT_TYPE.PASSPORT
-                    ? 'Hộ chiếu'
-                    : 'Chưa cập nhật'}
-                </span>
-              </div>
-
-              <div className='flex justify-between py-2 border-b border-gray-100'>
-                <span className='text-gray-600 font-medium'>
-                  {user?.user_identity_documents?.[0]?.document_type === DOCUMENT_TYPE.PASSPORT
-                    ? 'Số Hộ chiếu:'
-                    : 'Số CCCD:'}
-                </span>
-                <span className='text-gray-900 font-semibold'>
-                  {user?.user_identity_documents?.[0]?.document_number || 'Chưa cập nhật'}
-                </span>
-              </div>
-
-              <div className='flex justify-between py-2 border-b border-gray-100'>
-                <span className='text-gray-600 font-medium'>Ngày Cấp:</span>
-                <span className='text-gray-900 font-semibold'>
-                  {user?.user_identity_documents?.[0]?.issue_date
-                    ? formatDate(user.user_identity_documents[0].issue_date)
-                    : 'Chưa cập nhật'}
-                </span>
-              </div>
-
-              <div className='flex justify-between py-2 '>
-                <span className='text-gray-600 font-medium'>Nơi Cấp:</span>
-                <span className='text-gray-900 font-semibold'>
-                  {user?.user_identity_documents?.[0]?.place_of_issue || 'Chưa cập nhật'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Button */}
-          <div className='pt-6 border-t border-gray-200'>
-            <Button onClick={refreshUser} variant='outline' className='w-full md:w-auto'>
-              Làm mới thông tin
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {games.length === 0 && !loading && <div className='text-center text-gray-500 py-12'>Không có game nào</div>}
     </div>
   )
 }

@@ -1,11 +1,11 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
 import { useUser } from '@/contexts/user-context'
 import { SidebarTrigger } from './ui/sidebar'
+import { formatNumber } from '@/lib/utils'
 
 export default function Header() {
-  const { user, logout } = useUser()
+  const { user, balances } = useUser()
   return (
     <header className='w-full border-b bg-white px-6'>
       <div className='flex items-center justify-between h-16'>
@@ -31,7 +31,7 @@ export default function Header() {
             </div>
             <div className='block text-left'>
               <p className='text-sm font-medium text-gray-900'>{user?.full_name || user?.username}</p>
-              <p className='text-xs text-gray-500'>{user?.email}</p>
+              <p className='text-xs'>{formatNumber(balances?.find((b) => b.currency === 'Coin')?.balance || 0)} Coin</p>
             </div>
           </div>
         </div>

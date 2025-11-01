@@ -5,10 +5,12 @@ import { getProfile } from '@/services/user'
 import { cookiesInstance } from '@/services/cookies'
 import { useRouter } from 'next/navigation'
 import { User } from '@/models/user'
-
+import { WalletBalance } from '@/models/wallet'
+import { getWalletBalances } from '@/services/wallet'
 
 interface UserContextType {
   user: User | null
+  balances: WalletBalance[] | null
   loading: boolean
   error: string | null
   refreshUser: () => Promise<void>
@@ -23,6 +25,7 @@ interface UserProviderProps {
 
 export function UserProvider({ children }: UserProviderProps) {
   const [user, setUser] = useState<User | null>(null)
+  const [balances, setBalances] = useState<WalletBalance[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -44,6 +47,12 @@ export function UserProvider({ children }: UserProviderProps) {
         setUser(response.data)
       } else {
         throw new Error(response.errors?.vi || response.errors?.en || 'Failed to fetch user profile')
+      }
+      const walletBalances = await getWalletBalances()
+      if (walletBalances.code === 200) {
+        setBalances(walletBalances.data)
+      } else {
+        throw new Error(walletBalances.errors?.vi || walletBalances.errors?.en || 'Failed to fetch wallet balances')
       }
     } catch (err: any) {
       setError(err.message)
@@ -80,6 +89,7 @@ export function UserProvider({ children }: UserProviderProps) {
     error,
     refreshUser,
     logout,
+    balances,
   }
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>
