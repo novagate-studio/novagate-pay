@@ -85,3 +85,12 @@ export type TransferHistory = {
     ip: string
   } | null
 }
+
+export type ExchangeRate = {
+  id: number
+  min_transfer: number
+  rate: number
+  game: {
+    ingame_currency_name: string
+  }
+}

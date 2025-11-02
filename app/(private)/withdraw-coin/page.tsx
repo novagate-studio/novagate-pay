@@ -1,24 +1,15 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { getGameServers, getCharacters } from '@/services/game'
-import { GameServer, GameCharacter } from '@/models/game'
-import Image from 'next/image'
-import { DollarSign } from 'lucide-react'
-
-const PACKAGE_OPTIONS = [
-  { tPoint: 450, vnd: 50000 },
-  { tPoint: 900, vnd: 100000 },
-  { tPoint: 1800, vnd: 200000 },
-  { tPoint: 2700, vnd: 300000 },
-  { tPoint: 4500, vnd: 500000 },
-  { tPoint: 9000, vnd: 1000000 },
-]
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { GameCharacter, GameServer } from '@/models/game'
+import { getCharacters, getGameServers } from '@/services/game'
+import { getExchangeRates } from '@/services/wallet'
+import { ExchangeRate } from '@/models/wallet'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 export default function WithdrawCoinPage() {
   const searchParams = useSearchParams()
@@ -29,11 +20,12 @@ export default function WithdrawCoinPage() {
   const [characters, setCharacters] = useState<GameCharacter[]>([])
   const [selectedServer, setSelectedServer] = useState<string>('')
   const [selectedCharacter, setSelectedCharacter] = useState<string>('')
-  const [selectedPackage, setSelectedPackage] = useState<number | null>(null)
+  const [coinAmount, setCoinAmount] = useState<string>('')
+  const [exchangeRate, setExchangeRate] = useState<ExchangeRate | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch servers when gameId is available
+  // Fetch servers and exchange rate when gameId is available
   useEffect(() => {
     if (!gameId) {
       setError('Vui lòng chọn game')
@@ -41,23 +33,32 @@ export default function WithdrawCoinPage() {
       return
     }
 
-    const fetchServers = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true)
-        const response = await getGameServers(gameId)
-        if (response.data) {
-          const activeServers = response.data.filter((server) => server.status === 'active')
+
+        // Fetch servers
+        const serversResponse = await getGameServers(gameId)
+        if (serversResponse.data) {
+          const activeServers = serversResponse.data.filter((server) => server.status === 'active')
           setServers(activeServers)
         }
+
+        // Fetch exchange rate
+        const rateResponse = await getExchangeRates(gameId)
+        if (rateResponse.data && rateResponse.data.length > 0) {
+          // Get the first exchange rate (or you can add logic to select specific one)
+          setExchangeRate(rateResponse.data[0])
+        }
       } catch (err) {
-        setError('Không thể tải danh sách máy chủ')
+        setError('Không thể tải dữ liệu')
         console.error(err)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchServers()
+    fetchData()
   }, [gameId])
 
   // Fetch characters when server is selected
@@ -83,6 +84,14 @@ export default function WithdrawCoinPage() {
     fetchCharacters()
   }, [gameId, selectedServer])
 
+  // Calculate in-game amount based on coin amount and exchange rate
+  const calculateInGameAmount = () => {
+    if (!coinAmount || !exchangeRate) return 0
+    const amount = parseFloat(coinAmount)
+    if (isNaN(amount)) return 0
+    return Math.floor(amount * exchangeRate.rate)
+  }
+
   const handleSubmit = () => {
     if (!selectedServer) {
       alert('Vui lòng chọn máy chủ')
@@ -92,8 +101,12 @@ export default function WithdrawCoinPage() {
       alert('Vui lòng chọn nhân vật')
       return
     }
-    if (selectedPackage === null) {
-      alert('Vui lòng chọn gói')
+    if (!coinAmount || parseFloat(coinAmount) <= 0) {
+      alert('Vui lòng nhập số lượng coin hợp lệ')
+      return
+    }
+    if (exchangeRate && parseFloat(coinAmount) < exchangeRate.min_transfer) {
+      alert(`Số lượng coin tối thiểu là ${exchangeRate.min_transfer}`)
       return
     }
 
@@ -102,8 +115,9 @@ export default function WithdrawCoinPage() {
       gameId,
       serverId: selectedServer,
       characterId: selectedCharacter,
-      packageIndex: selectedPackage,
-      package: PACKAGE_OPTIONS[selectedPackage],
+      coinAmount: parseFloat(coinAmount),
+      inGameAmount: calculateInGameAmount(),
+      exchangeRate: exchangeRate?.rate,
     })
   }
 
@@ -128,84 +142,79 @@ export default function WithdrawCoinPage() {
       <h1 className='text-2xl font-bold text-gray-900'>Chuyển Coin vào game</h1>
 
       {/* Section 1: Character Information */}
-      <Card className=''>
-        <CardHeader className=''>
-          <CardTitle className='text-xl font-bold'>Thông tin nhân vật</CardTitle>
-        </CardHeader>
-        <CardContent className='space-y-4 '>
-          {/* Server Selection */}
-          <div className='space-y-2'>
-            <Label htmlFor='server'>Chọn máy chủ</Label>
-            <Select value={selectedServer} onValueChange={setSelectedServer}>
-              <SelectTrigger id='server' className='h-12 w-full'>
-                <SelectValue placeholder='Chọn máy chủ' />
-              </SelectTrigger>
-              <SelectContent>
-                {servers.map((server) => (
-                  <SelectItem key={server.id} value={server.id.toString()}>
-                    {server.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div className='space-y-4'>
+        {/* Server Selection */}
+        <div className='space-y-2'>
+          <Label htmlFor='server'>Chọn máy chủ</Label>
+          <Select value={selectedServer} onValueChange={setSelectedServer}>
+            <SelectTrigger id='server' className='w-full'>
+              <SelectValue placeholder='Chọn máy chủ' />
+            </SelectTrigger>
+            <SelectContent>
+              {servers.map((server) => (
+                <SelectItem key={server.id} value={server.id.toString()}>
+                  {server.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-          {/* Character Selection */}
-          <div className='space-y-2'>
-            <Label htmlFor='character'>Chọn nhân vật</Label>
-            <Select
-              value={selectedCharacter}
-              onValueChange={setSelectedCharacter}
-              disabled={!selectedServer || characters.length === 0}>
-              <SelectTrigger id='character' className='h-12 w-full'>
-                <SelectValue placeholder='Chọn nhân vật' />
-              </SelectTrigger>
-              <SelectContent>
-                {characters.map((character) => (
-                  <SelectItem key={character.id} value={character.id.toString()}>
-                    {character.name} - Cấp {character.level}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Character Selection */}
+        <div className='space-y-2'>
+          <Label htmlFor='character'>Chọn nhân vật</Label>
+          <Select
+            value={selectedCharacter}
+            onValueChange={setSelectedCharacter}
+            disabled={!selectedServer || characters.length === 0}>
+            <SelectTrigger id='character' className='w-full'>
+              <SelectValue placeholder='Chọn nhân vật' />
+            </SelectTrigger>
+            <SelectContent>
+              {characters.map((character) => (
+                <SelectItem key={character.id} value={character.id.toString()}>
+                  {character.name} - Cấp {character.level}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      {/* Section 2: Package Selection */}
-      <Card>
-        <CardHeader className=''>
-          <CardTitle className='text-xl font-bold'>Chọn gói</CardTitle>
-        </CardHeader>
-        <CardContent className=''>
-          <div className='grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
-            {PACKAGE_OPTIONS.map((pkg, index) => (
-              <div
-                key={index}
-                onClick={() => setSelectedPackage(index)}
-                className={`cursor-pointer rounded-lg border-2 p-4 transition-all ${
-                  selectedPackage === index ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-                }`}>
-                <div className='flex flex-col items-center space-y-3'>
-                  <div className='text-orange-500 font-bold text-lg'>{pkg.tPoint.toLocaleString()} Coin</div>
-                  <div className='w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-400 flex items-center justify-center shadow-lg'>
-                    <div className='w-16 h-16 rounded-full bg-blue-900 flex items-center justify-center text-white font-bold text-xl'>
-                      <DollarSign />
-                    </div>
-                  </div>
-                  <div className='text-blue-400 font-semibold text-base'>{pkg.vnd.toLocaleString()} VND</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+        {/* Coin Amount Input */}
+        <div className='space-y-2'>
+          <Label htmlFor='coinAmount'>Số lượng Coin muốn chuyển</Label>
+          <Input
+            id='coinAmount'
+            type='number'
+            min='0'
+            step='1'
+            placeholder='Nhập số lượng Coin'
+            value={coinAmount}
+            onChange={(e) => setCoinAmount(e.target.value)}
+            className='w-full'
+          />
+          {exchangeRate && (
+            <div className='text-sm space-y-1'>
+              <p className='text-gray-600'>
+                Tỷ lệ: 1 Coin = {exchangeRate.rate} {exchangeRate.game.ingame_currency_name}
+              </p>
+              <p className='text-gray-600'>Số lượng tối thiểu: {exchangeRate.min_transfer} Coin</p>
+              {coinAmount && parseFloat(coinAmount) > 0 && (
+                <p className='text-green-600 font-semibold'>
+                  Bạn sẽ nhận được: {calculateInGameAmount().toLocaleString()} {exchangeRate.game.ingame_currency_name}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className='flex gap-4'>
         {/* Submit Button */}
-        <Button onClick={handleSubmit} size={'lg'} className='w-full md:w-xs'>
+        <Button onClick={handleSubmit} size={'lg'} className='w-full md:w-auto'>
           Chuyển đổi
         </Button>
-        <Button variant={'outline'} onClick={() => router.push('/')} size={'lg'} className='w-full md:w-xs'>
+        <Button variant={'outline'} onClick={() => router.push('/')} size={'lg'} className='w-full md:w-auto'>
           Quay lại Trang chủ
         </Button>
       </div>
