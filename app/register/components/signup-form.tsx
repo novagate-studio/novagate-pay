@@ -117,6 +117,23 @@ const formSchema = z
         {
           message: 'Vui lòng chọn ngày sinh',
         }
+      )
+      .refine(
+        (date) => {
+          if (!date) return false
+          const today = new Date()
+          const age = today.getFullYear() - date.getFullYear()
+          const monthDiff = today.getMonth() - date.getMonth()
+          const dayDiff = today.getDate() - date.getDate()
+
+          // Calculate exact age
+          const exactAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age
+
+          return exactAge >= 18
+        },
+        {
+          message: 'Bạn phải đủ 18 tuổi trở lên để đăng ký',
+        }
       ),
     gender: z.enum(['male', 'female', 'prefer-not-to-say']),
     address: z
@@ -156,7 +173,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'form'>
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (isSubmitting) return
-    
+
     setIsSubmitting(true)
     try {
       const response = await sendOTP(values.phone)
@@ -179,7 +196,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'form'>
   }
   const handleConfirmOTP = async () => {
     if (isConfirming) return
-    
+
     setIsConfirming(true)
     try {
       const response = await registry({
@@ -302,7 +319,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'form'>
                     <FormItem>
                       <FormLabel>Số điện thoại</FormLabel>
                       <FormControl>
-                        <Input type='tel' placeholder='Nhập số điện thoại' {...field} />
+                        <Input type='tel' placeholder='Nhập số điện thoại đã đăng ký Zalo' {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
