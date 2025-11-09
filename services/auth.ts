@@ -15,6 +15,10 @@ export const checkEmail = async (email: string): Promise<ResponseData<any>> => {
   const response = await axiosInstance.get(`/api/v2/auth/register/checkEmail?email=${email}`)
   return response.data
 }
+export const forgotPassword = async (phone: string): Promise<ResponseData<any>> => {
+  const response = await axiosInstance.post(`/api/v2/auth/forgotPassword`, { phone })
+  return response.data
+}
 export const sendOTP = async (phone: string): Promise<ResponseData<any>> => {
   const response = await axiosInstance.post(`/api/v2/auth/register/sendOtp`, { phone_number: phone })
   return response.data
