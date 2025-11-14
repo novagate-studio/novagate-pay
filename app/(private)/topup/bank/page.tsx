@@ -76,7 +76,7 @@ export default function BankTopupPage() {
     <div className='space-y-6'>
       <Card>
         <CardHeader>
-          <CardTitle className='text-2xl'>Nạp Coin bằng thẻ EPG Card</CardTitle>
+          <CardTitle className='text-2xl'>Nạp Coin</CardTitle>
         </CardHeader>
         <CardContent className='space-y-6'>
           {/* Package Selection */}
