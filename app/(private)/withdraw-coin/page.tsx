@@ -3,9 +3,6 @@
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { GameCharacter, GameServer } from '@/models/game'
-import { getCharacters, getGameServers } from '@/services/game'
 import { getExchangeRates } from '@/services/wallet'
 import { ExchangeRate } from '@/models/wallet'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -16,16 +13,12 @@ export default function WithdrawCoinPage() {
   const gameId = searchParams.get('gameId')
   const router = useRouter()
 
-  const [servers, setServers] = useState<GameServer[]>([])
-  const [characters, setCharacters] = useState<GameCharacter[]>([])
-  const [selectedServer, setSelectedServer] = useState<string>('')
-  const [selectedCharacter, setSelectedCharacter] = useState<string>('')
   const [coinAmount, setCoinAmount] = useState<string>('')
   const [exchangeRate, setExchangeRate] = useState<ExchangeRate | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch servers and exchange rate when gameId is available
+  // Fetch exchange rate when gameId is available
   useEffect(() => {
     if (!gameId) {
       setError('Vui lòng chọn game')
@@ -36,13 +29,6 @@ export default function WithdrawCoinPage() {
     const fetchData = async () => {
       try {
         setLoading(true)
-
-        // Fetch servers
-        const serversResponse = await getGameServers(gameId)
-        if (serversResponse.data) {
-          const activeServers = serversResponse.data.filter((server) => server.status === 'active')
-          setServers(activeServers)
-        }
 
         // Fetch exchange rate
         const rateResponse = await getExchangeRates(gameId)
@@ -61,29 +47,6 @@ export default function WithdrawCoinPage() {
     fetchData()
   }, [gameId])
 
-  // Fetch characters when server is selected
-  useEffect(() => {
-    if (!gameId || !selectedServer) {
-      setCharacters([])
-      setSelectedCharacter('')
-      return
-    }
-
-    const fetchCharacters = async () => {
-      try {
-        const response = await getCharacters(gameId, selectedServer)
-        if (response.data) {
-          setCharacters(response.data)
-        }
-      } catch (err) {
-        console.error('Không thể tải danh sách nhân vật', err)
-        setCharacters([])
-      }
-    }
-
-    fetchCharacters()
-  }, [gameId, selectedServer])
-
   // Calculate in-game amount based on coin amount and exchange rate
   const calculateInGameAmount = () => {
     if (!coinAmount || !exchangeRate) return 0
@@ -93,14 +56,6 @@ export default function WithdrawCoinPage() {
   }
 
   const handleSubmit = () => {
-    if (!selectedServer) {
-      alert('Vui lòng chọn máy chủ')
-      return
-    }
-    if (!selectedCharacter) {
-      alert('Vui lòng chọn nhân vật')
-      return
-    }
     if (!coinAmount || parseFloat(coinAmount) <= 0) {
       alert('Vui lòng nhập số lượng coin hợp lệ')
       return
@@ -113,8 +68,6 @@ export default function WithdrawCoinPage() {
     // Handle withdrawal logic here
     console.log('Withdrawal data:', {
       gameId,
-      serverId: selectedServer,
-      characterId: selectedCharacter,
       coinAmount: parseFloat(coinAmount),
       inGameAmount: calculateInGameAmount(),
       exchangeRate: exchangeRate?.rate,
@@ -141,45 +94,8 @@ export default function WithdrawCoinPage() {
     <div className='space-y-4'>
       <h1 className='text-2xl font-bold text-gray-900'>Chuyển Coin vào game</h1>
 
-      {/* Section 1: Character Information */}
+      {/* Coin Amount Input Section */}
       <div className='space-y-4'>
-        {/* Server Selection */}
-        <div className='space-y-2'>
-          <Label htmlFor='server'>Chọn máy chủ</Label>
-          <Select value={selectedServer} onValueChange={setSelectedServer}>
-            <SelectTrigger id='server' className='w-full'>
-              <SelectValue placeholder='Chọn máy chủ' />
-            </SelectTrigger>
-            <SelectContent>
-              {servers.map((server) => (
-                <SelectItem key={server.id} value={server.id.toString()}>
-                  {server.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Character Selection */}
-        <div className='space-y-2'>
-          <Label htmlFor='character'>Chọn nhân vật</Label>
-          <Select
-            value={selectedCharacter}
-            onValueChange={setSelectedCharacter}
-            disabled={!selectedServer || characters.length === 0}>
-            <SelectTrigger id='character' className='w-full'>
-              <SelectValue placeholder='Chọn nhân vật' />
-            </SelectTrigger>
-            <SelectContent>
-              {characters.map((character) => (
-                <SelectItem key={character.id} value={character.id.toString()}>
-                  {character.name} - Cấp {character.level}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Coin Amount Input */}
         <div className='space-y-2'>
           <Label htmlFor='coinAmount'>Số lượng Coin muốn chuyển</Label>
