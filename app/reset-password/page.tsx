@@ -2,6 +2,7 @@ import { ResetPasswordForm } from '@/app/reset-password/components/reset-passwor
 import Mock from '@/assets/images/mock.jpg'
 import Logo from '@/assets/logo/PNG_BLACK.png'
 import Image from 'next/image'
+import { Suspense } from 'react'
 
 export default function ResetPasswordPage() {
   return (
@@ -12,7 +13,9 @@ export default function ResetPasswordPage() {
         </div>
         <div className='flex flex-1 items-center justify-center'>
           <div className='w-full max-w-xs'>
-            <ResetPasswordForm />
+            <Suspense fallback={<div>Loading...</div>}>
+              <ResetPasswordForm />
+            </Suspense>
           </div>
         </div>
       </div>

@@ -6,9 +6,9 @@ import { Input } from '@/components/ui/input'
 import { getExchangeRates } from '@/services/wallet'
 import { ExchangeRate } from '@/models/wallet'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 
-export default function WithdrawCoinPage() {
+function WithdrawCoinContent() {
   const searchParams = useSearchParams()
   const gameId = searchParams.get('gameId')
   const router = useRouter()
@@ -135,5 +135,18 @@ export default function WithdrawCoinPage() {
         </Button>
       </div>
     </div>
+  )
+}
+
+export default function WithdrawCoinPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className='flex items-center justify-center min-h-screen'>
+          <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900' />
+        </div>
+      }>
+      <WithdrawCoinContent />
+    </Suspense>
   )
 }
