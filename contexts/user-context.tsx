@@ -81,6 +81,35 @@ export function UserProvider({ children }: UserProviderProps) {
       setLoading(false)
       router.push('/login')
     }
+
+    // Check token when user returns to the website
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const currentToken = cookiesInstance.get('access_token')
+        if (!currentToken) {
+          // Token was removed, logout user
+          logout()
+        }
+      }
+    }
+
+    // Check token when window regains focus
+    const handleFocus = () => {
+      const currentToken = cookiesInstance.get('access_token')
+      if (currentToken) {
+        fetchUserProfile()
+      } else {
+        logout()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
   }, [])
 
   const value: UserContextType = {
