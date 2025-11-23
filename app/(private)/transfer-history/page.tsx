@@ -95,8 +95,6 @@ export default function TransferHistoryPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Game</TableHead>
-                    <TableHead>Máy chủ</TableHead>
-                    <TableHead>Nhân vật</TableHead>
                     <TableHead>Số Coin</TableHead>
                     <TableHead>Nhận được</TableHead>
                     <TableHead>Trạng thái</TableHead>
@@ -108,8 +106,6 @@ export default function TransferHistoryPage() {
                   {histories.map((history) => (
                     <TableRow key={history.id}>
                       <TableCell className='font-medium'>{history.game.name}</TableCell>
-                      <TableCell>{history.game_server.name}</TableCell>
-                      <TableCell>{history.game_character.name}</TableCell>
                       <TableCell className='font-semibold text-red-600'>
                         -{history.amount_coin.toLocaleString()} Coin
                       </TableCell>

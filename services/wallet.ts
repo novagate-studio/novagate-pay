@@ -33,3 +33,8 @@ export const getExchangeRates = async (gameId: string): Promise<ResponseData<Exc
   const response = await axiosInstance.get(`/api/v2/wallets/exchange-rates?gameId=${gameId}`)
   return response.data
 }
+
+export const transferToGame = async (data: { gameId: number; amount: number }): Promise<ResponseData<any>> => {
+  const response = await axiosInstance.post('/api/v2/wallets/transfer-to-game', data)
+  return response.data
+}
